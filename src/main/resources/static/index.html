@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Notes</title>
+  <style>
+    body { font: 16px system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; color: #222; }
+    form, article { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+    label { display: block; margin: .75rem 0 .25rem; }
+    input, textarea { box-sizing: border-box; width: 100%; padding: .6rem; font: inherit; }
+    textarea { min-height: 6rem; }
+    button { margin-top: .75rem; padding: .5rem .8rem; cursor: pointer; }
+    article h2 { margin: 0 0 .4rem; }
+    article p { white-space: pre-wrap; }
+    small { color: #666; }
+    #message { color: #a00000; }
+  </style>
+</head>
+<body>
+  <h1>Notes</h1>
+  <form id="note-form">
+    <h2>Add a note</h2>
+    <label for="title">Title</label>
+    <input id="title" name="title" maxlength="200" required>
+    <label for="content">Content</label>
+    <textarea id="content" name="content" required></textarea>
+    <button type="submit">Save note</button>
+  </form>
+  <p id="message" role="alert"></p>
+  <section id="notes" aria-label="Saved notes"></section>
+
+  <script>
+    const form = document.querySelector('#note-form');
+    const list = document.querySelector('#notes');
+    const message = document.querySelector('#message');
+
+    async function loadNotes() {
+      try {
+        const response = await fetch('/api/notes');
+        if (!response.ok) throw new Error('Could not load notes.');
+        const notes = await response.json();
+        list.replaceChildren();
+        if (notes.length === 0) {
+          const empty = document.createElement('p');
+          empty.textContent = 'No notes yet.';
+          list.append(empty);
+        }
+        for (const note of notes) {
+          const article = document.createElement('article');
+          const title = document.createElement('h2');
+          title.textContent = note.title;
+          const content = document.createElement('p');
+          content.textContent = note.content;
+          const date = document.createElement('small');
+          date.textContent = `Created: ${note.createdAt.replace('T', ' ')} UTC`;
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.textContent = 'Delete';
+          remove.addEventListener('click', async () => {
+            try {
+              const result = await fetch(`/api/notes/${note.id}`, { method: 'DELETE' });
+              if (!result.ok) throw new Error('Could not delete note.');
+              message.textContent = '';
+              await loadNotes();
+            } catch (error) {
+              message.textContent = error.message;
+            }
+          });
+          article.append(title, content, date, document.createElement('br'), remove);
+          list.append(article);
+        }
+        message.textContent = '';
+      } catch (error) {
+        message.textContent = error.message;
+      }
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const title = form.elements.title.value.trim();
+      const content = form.elements.content.value.trim();
+      if (!title || !content) return;
+      try {
+        const response = await fetch('/api/notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, content })
+        });
+        if (!response.ok) throw new Error('Could not save note.');
+        form.reset();
+        await loadNotes();
+      } catch (error) {
+        message.textContent = error.message;
+      }
+    });
+
+    loadNotes();
+  </script>
+</body>
+</html>
