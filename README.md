@@ -29,3 +29,7 @@ App: <http://localhost:8080>. pgAdmin: <http://localhost:5050> (database host `d
 ## Stop and data
 
 `docker compose down` stops the containers and retains data. `docker compose down -v` also deletes the volumes and all stored notes and pgAdmin settings.
+
+## Collaborators
+
+Hannes Pernthaler, Mathias Rauter
